@@ -1,0 +1,42 @@
+# Phases: "sherlock" System Monitor
+
+## Phase 0 — Learning / Groundwork
+- Get comfortable with the `sysinfo` crate: read CPU, memory, per-process stats, print to console.
+- Skim `/proc` on your own machine (`/proc/stat`, `/proc/meminfo`, `/proc/[pid]/stat`) so you understand what `sysinfo` is abstracting.
+- Write a throwaway script: poll every 5s with `tokio::time::interval`, print a JSON blob to stdout. No storage, no server yet.
+- **Exit criteria:** you can watch live CPU/mem numbers scroll in your terminal for 5+ minutes without crashing.
+
+## Phase 1 — Agent: Sampling + Buffering
+- Build the real `Metric` struct (system-level + per-process).
+- Implement the 5s polling loop with an in-memory ring buffer.
+- Implement the 60s flush → for now, just print the batch instead of POSTing it.
+- **Exit criteria:** agent runs continuously, buffers correctly, flushes every 60s with the right sample count (12).
+
+## Phase 2 — Backend: Storage Path
+- Set up Axum + Postgres, `handlers/metrics.rs`.
+- `samples` + `process_samples` tables + migrations.
+- `POST /api/metrics/batch` — accept and insert a batch.
+- Point the agent's flush at this endpoint instead of printing.
+- **Exit criteria:** run the agent for 10+ minutes, confirm rows landing correctly in Postgres, batched (not per-sample).
+
+## Phase 3 — Live Path
+- Add SSE endpoint (agent-direct or backend-mediated — pick whichever is simpler to wire up first).
+- Minimal dashboard page: connect to SSE, render a live-updating chart.
+- **Exit criteria:** open the dashboard, see numbers update in near real time while doing something CPU-heavy on the machine.
+
+## Phase 4 — History + Correlation
+- `GET /api/metrics/history?from=&to=` — query Postgres, return chartable data.
+- `GET /api/correlate?timestamp=` — join `samples` + `process_samples`, return top processes at that time.
+- Dashboard: history view with time range picker, click-a-spike-to-correlate interaction.
+- **Exit criteria:** deliberately spike CPU (e.g. run a heavy build), find it later in the history view, correctly identify the culprit process.
+
+## Phase 5 — Polish for Resume/Demo
+- Basic retention policy (drop/downsample data older than N hours).
+- README with architecture diagram + setup instructions.
+- Record a short demo GIF/video showing: live view → deliberate spike → history view → correlation.
+- Deploy backend (Railway) if you want a live demo link; agent stays local (it's inherently a local tool) — document that clearly in the README so it's not read as a missing deployment.
+
+## Scope Discipline Notes
+- Don't add Windows/Mac support until Linux v1 is fully working end-to-end.
+- Don't add network-level packet inspection — interface-level stats only, as scoped in the PRD.
+- If Phase 3 (live path) turns out harder than expected, it's fine to ship Phase 2 + Phase 4 first and treat live view as a stretch goal — history + correlation is the more resume-differentiating half anyway.
