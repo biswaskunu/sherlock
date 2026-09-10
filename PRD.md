@@ -19,11 +19,11 @@ Primarily a personal tool / portfolio piece. Secondary audience: anyone debuggin
 ## 5. Core Features
 
 ### 5.1 Sampling Agent
-- Polls system + process-level metrics every 5s (configurable) via `sysinfo` / `/proc`.
+- Polls system + process-level metrics every 3s (configurable) via `sysinfo` / `/proc`.
 - Buffers samples in memory.
 
 ### 5.2 Live Path
-- Agent streams each 5s sample to a local dashboard in real time via SSE.
+- Agent streams each 3s sample to a local dashboard in real time via SSE.
 - Dashboard shows live CPU/memory/disk graphs with near-zero latency.
 
 ### 5.3 Durable Storage Path
@@ -48,4 +48,4 @@ Primarily a personal tool / portfolio piece. Secondary audience: anyone debuggin
 ## 7. Risks / Open Questions
 - Cross-platform support (Linux `/proc` vs Windows/Mac APIs) — may scope to Linux-only for v1 via `sysinfo` abstraction.
 - Agent crash mid-buffer loses up to 60s of unsent samples — acceptable for v1, noted as a known limitation.
-- Correlation accuracy depends on sampling granularity (5s may miss very short spikes) — acceptable trade-off, documented.
+- Correlation accuracy depends on sampling granularity (3s may miss very short spikes) — acceptable trade-off, documented.

@@ -3,12 +3,12 @@
 ## Phase 0 — Learning / Groundwork
 - Get comfortable with the `sysinfo` crate: read CPU, memory, per-process stats, print to console.
 - Skim `/proc` on your own machine (`/proc/stat`, `/proc/meminfo`, `/proc/[pid]/stat`) so you understand what `sysinfo` is abstracting.
-- Write a throwaway script: poll every 5s with `tokio::time::interval`, print a JSON blob to stdout. No storage, no server yet.
-- **Exit criteria:** you can watch live CPU/mem numbers scroll in your terminal for 5+ minutes without crashing.
+- Write a throwaway script: poll every 3s with `tokio::time::interval`, print a JSON blob to stdout. No storage, no server yet.
+- **Exit criteria:** you can watch live CPU/mem numbers scroll in your terminal for 3+ minutes without crashing.
 
 ## Phase 1 — Agent: Sampling + Buffering
 - Build the real `Metric` struct (system-level + per-process).
-- Implement the 5s polling loop with an in-memory ring buffer.
+- Implement the 3s polling loop with an in-memory ring buffer.
 - Implement the 60s flush → for now, just print the batch instead of POSTing it.
 - **Exit criteria:** agent runs continuously, buffers correctly, flushes every 60s with the right sample count (12).
 

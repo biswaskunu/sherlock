@@ -8,7 +8,7 @@ Two data paths, one sampling loop:
                      ┌──────────────────┐
                      │   Sampling Loop   │
                      │ (tokio::interval, │
-                     │     every 5s)     │
+                     │     every 3s)     │
                      └─────────┬─────────┘
                                │
                  ┌─────────────┴─────────────┐
@@ -30,7 +30,7 @@ Two data paths, one sampling loop:
 
 ### 2.1 Agent (Rust binary, runs locally)
 - Uses `sysinfo` crate to read CPU, memory, disk I/O, and per-process stats.
-- `tokio::time::interval` drives a 5s polling loop.
+- `tokio::time::interval` drives a 3s polling loop.
 - Each tick:
   1. Serializes a `Metric` struct to JSON.
   2. Pushes it to an in-memory ring buffer (for batching).
@@ -79,5 +79,5 @@ agent/
 
 ## 5. Known Limitations (v1)
 - Agent crash mid-buffer loses up to 60s of unsent samples.
-- Correlation granularity limited by 5s sampling interval — very short spikes may be missed.
+- Correlation granularity limited by 3s sampling interval — very short spikes may be missed.
 - Linux-first (via `/proc` through `sysinfo`); Windows/Mac support not guaranteed in v1.
