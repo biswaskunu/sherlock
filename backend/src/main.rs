@@ -1,6 +1,8 @@
 use axum::{routing::get, Router};
 use std::net::SocketAddr;
 
+mod db;
+
 async fn health() -> &'static str {
     "ok"
 }
@@ -15,8 +17,17 @@ async fn main() {
         .ok()
         .and_then(|p| p.parse().ok())
         .unwrap_or(8080);
+    let database_url =
+        std::env::var("DATABASE_URL").expect("DATABASE_URL must be set (see .env.example)");
 
-    let app = Router::new().route("/health", get(health));
+    let pool = db::connect(&database_url)
+        .await
+        .expect("failed to connect to Postgres");
+    tracing::info!("connected to Postgres");
+
+    let app = Router::new()
+        .route("/health", get(health))
+        .with_state(pool);
 
     let addr: SocketAddr = format!("{host}:{port}").parse().expect("invalid bind addr");
     tracing::info!("backend listening on {addr}");
