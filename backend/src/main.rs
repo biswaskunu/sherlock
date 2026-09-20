@@ -1,7 +1,9 @@
-use axum::{routing::get, Router};
+use axum::{routing::{get, post}, Router};
 use std::net::SocketAddr;
 
 mod db;
+mod handlers;
+mod models;
 
 async fn health() -> &'static str {
     "ok"
@@ -27,6 +29,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(health))
+        .route("/api/metrics/batch", post(handlers::metrics::post_batch))
         .with_state(pool);
 
     let addr: SocketAddr = format!("{host}:{port}").parse().expect("invalid bind addr");
