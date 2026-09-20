@@ -27,7 +27,7 @@ Primarily a personal tool / portfolio piece. Secondary audience: anyone debuggin
 - Dashboard shows live CPU/memory/disk graphs with near-zero latency.
 
 ### 5.3 Durable Storage Path
-- Agent batches 12 samples (1 minute) and POSTs the batch to the Axum backend.
+- Agent batches 20 samples (1 minute) and POSTs the batch to the Axum backend.
 - Backend writes batch to Postgres in a single insert.
 - Historical data retained with a basic retention/downsampling policy (raw data for N hours, aggregated beyond that).
 

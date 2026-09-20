@@ -66,14 +66,46 @@ fn sample(sys: &mut System) -> Metric {
     }
 }
 
-fn flush(buffer: &mut VecDeque<Metric>) {
-    // Phase 2 replaces this print with a POST to /api/metrics/batch.
-    let batch: Vec<&Metric> = buffer.iter().collect();
-    match serde_json::to_string(&batch) {
-        Ok(json) => println!("FLUSH ({} samples): {}", batch.len(), json),
-        Err(e) => eprintln!("serialize error on flush: {}", e),
+fn backend_url() -> String {
+    if let Ok(url) = std::env::var("BACKEND_URL") {
+        return url;
     }
-    buffer.clear();
+    let host = std::env::var("BACKEND_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port = std::env::var("BACKEND_PORT").unwrap_or_else(|_| "8080".to_string());
+    format!("http://{host}:{port}/api/metrics/batch")
+}
+
+fn env_usize(name: &str, default: usize) -> usize {
+    std::env::var(name)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
+}
+
+async fn flush(client: &reqwest::Client, url: &str, buffer: &mut VecDeque<Metric>, max_buffered: usize) {
+    let batch: Vec<&Metric> = buffer.iter().collect();
+    match client.post(url).json(&batch).send().await {
+        Ok(resp) if resp.status().is_success() => {
+            println!("FLUSH ({} samples): posted to {url}", batch.len());
+            buffer.clear();
+        }
+        Ok(resp) => {
+            // Keep buffer for retry on next flush; cap growth while backend is unhappy.
+            eprintln!("flush rejected ({}), keeping {} samples for retry", resp.status(), buffer.len());
+            drop_oldest_over(buffer, max_buffered);
+        }
+        Err(e) => {
+            eprintln!("flush POST failed ({e}), keeping {} samples for retry", buffer.len());
+            drop_oldest_over(buffer, max_buffered);
+        }
+    }
+}
+
+/// Bound memory while the backend is unreachable: drop oldest samples past the cap.
+fn drop_oldest_over(buffer: &mut VecDeque<Metric>, max_buffered: usize) {
+    while buffer.len() > max_buffered {
+        buffer.pop_front();
+    }
 }
 
 #[tokio::main]
@@ -81,8 +113,19 @@ async fn main() {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    let mut buffer: VecDeque<Metric> = VecDeque::with_capacity(FLUSH_EVERY_N_SAMPLES);
-    let mut ticker = interval(Duration::from_secs(POLL_INTERVAL_SECS));
+    let poll_secs = env_usize("AGENT_POLL_INTERVAL_SECS", POLL_INTERVAL_SECS as usize) as u64;
+    let flush_every = env_usize("AGENT_FLUSH_EVERY_N_SAMPLES", FLUSH_EVERY_N_SAMPLES);
+    // Cap retained samples at 3 flush windows so a dead backend can't OOM the agent.
+    let max_buffered = flush_every * 3;
+    let url = backend_url();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .expect("failed to build HTTP client");
+    println!("agent posting to {url} every {flush_every} samples ({poll_secs}s poll)");
+
+    let mut buffer: VecDeque<Metric> = VecDeque::with_capacity(flush_every);
+    let mut ticker = interval(Duration::from_secs(poll_secs));
 
     loop {
         ticker.tick().await;
@@ -94,8 +137,8 @@ async fn main() {
         );
         buffer.push_back(metric);
 
-        if buffer.len() >= FLUSH_EVERY_N_SAMPLES {
-            flush(&mut buffer);
+        if buffer.len() >= flush_every {
+            flush(&client, &url, &mut buffer, max_buffered).await;
         }
     }
 }

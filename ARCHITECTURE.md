@@ -18,7 +18,7 @@
                  ┌─────────────┴─────────────┐
                  ▼                           ▼
          LIVE PATH (SSE)              STORAGE PATH (batched)
-         push each sample             buffer 12 samples (60s)
+          push each sample             buffer 20 samples (60s)
          immediately to               then POST batch to
          dashboard, no                Axum backend
          storage roundtrip                   │
@@ -43,7 +43,7 @@
 - Every 60s (20 ticks): calls `flush()` — currently prints batch JSON to stdout. Phase 2 swaps this to `POST /api/metrics/batch`.
 
 ### 2.2 Backend (Axum + Postgres) — Phase 2 🔲
-- `POST /api/metrics/batch` — accepts an array of ~12 samples, writes them in a single `INSERT`.
+- `POST /api/metrics/batch` — accepts an array of ~20 samples, writes them in a single `INSERT`.
 - `GET /api/metrics/live` (SSE) — streams live samples to dashboard clients (backend-mediated, not agent-direct).
 - `GET /api/metrics/history?from=&to=` — queries Postgres for a time range, returns samples for charting.
 - `GET /api/correlate?timestamp=` — given a timestamp, returns system metrics + top N processes by resource usage at that moment.

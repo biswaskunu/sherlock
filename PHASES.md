@@ -10,7 +10,7 @@
 - Build the real `Metric` struct (system-level + per-process).
 - Implement the 3s polling loop with an in-memory ring buffer.
 - Implement the 60s flush → for now, just print the batch instead of POSTing it.
-- **Exit criteria:** agent runs continuously, buffers correctly, flushes every 60s with the right sample count (12).
+- **Exit criteria:** agent runs continuously, buffers correctly, flushes every 60s with the right sample count (20).
 
 ## Phase 2 — Backend: Storage Path
 - Set up Axum + Postgres, `handlers/metrics.rs`.

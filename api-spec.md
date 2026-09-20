@@ -4,7 +4,7 @@ Base URL: `http://localhost:8080`
 
 ## POST /api/metrics/batch
 
-Ingest a batch of ~12 samples (60s window) from the agent.
+Ingest a batch of ~20 samples (60s window) from the agent.
 
 **Request:**
 ```json
