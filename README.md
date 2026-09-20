@@ -17,7 +17,7 @@ Local Rust observability agent: samples system metrics every 3s, streams live vi
 |-------|--------|-------------|
 | 0 — Groundwork | ✅ | sysinfo polling, /proc understanding |
 | 1 — Agent sampling | ✅ | Metric struct, ring buffer, 60s flush to stdout |
-| 2 — Backend ingestion | 🔲 | Axum + Postgres batch POST (next) |
+| 2 — Backend ingestion | ✅ | Axum + Postgres batch POST (10-min E2E verified) |
 | 3 — Live path | 🔲 | SSE streaming + dashboard |
 | 4 — History + correlation | 🔲 | Time-range queries + spike→process join |
 | 5 — Polish + demo | 🔲 | Retention, README finish, demo GIF |
@@ -34,17 +34,16 @@ cargo run
 ## Running Full Stack (Phase 2+)
 
 ```bash
-# 1. Start Postgres
-docker compose up -d postgres
+# 1. Start Postgres (system service, or `docker compose up -d postgres`
+#    if you prefer the container — see .env note)
+# 2. Apply migrations
+sqlx migrate run --source backend/migrations
 
-# 2. Apply schema
-psql $DATABASE_URL -f schema.sql
+# 3. Start backend
+cargo run -p backend
 
-# 3. Start backend (Phase 2)
-cd backend && cargo run
-
-# 4. Start agent (flush POSTs to backend instead of stdout)
-cd agent && cargo run
+# 4. Start agent (flush POSTs 20-sample batches to backend)
+cargo run -p agent
 ```
 
 ## Project Structure
@@ -52,12 +51,13 @@ cd agent && cargo run
 ```
 sherlock/
 ├── agent/              # Rust sampling binary
-│   └── src/main.rs     # poll loop, buffering, flush
-├── backend/            # Axum server (Phase 2+)
+│   └── src/main.rs     # poll loop, buffering, batch POST flush
+├── backend/            # Axum server
 │   └── src/
-│       ├── handlers/   # batch POST, history, correlate, SSE
-│       ├── models/      # sample + process_sample structs
-│       └── db/         # pool, queries
+│       ├── handlers/   # batch POST ✅; history, correlate, SSE (pending)
+│       ├── models/     # ingest DTOs (BatchItem, ProcessItem)
+│       └── db/         # PgPool setup
+│   └── migrations/     # sqlx migrations (0001 samples + process_samples)
 ├── schema.sql          # Postgres migrations
 ├── docker-compose.yml  # local Postgres
 ├── .env.example        # env template
@@ -77,6 +77,6 @@ sherlock/
 
 ## Notes for AI Handoff
 
-- Agent flush currently prints JSON to stdout — Phase 2 swaps to POST `/api/metrics/batch`
-- `ARCHITECTURE.md` describes target architecture; current state is Phase 1 only
+- Agent flush POSTs 20-sample batches to `POST /api/metrics/batch` (keeps buffer + retries on failure)
+- `ARCHITECTURE.md` describes target architecture; current state is end of Phase 2 (storage path done, SSE/history/correlate pending)
 - `PHASES.md` has the canonical phase order + exit criteria — follow that for sequencing

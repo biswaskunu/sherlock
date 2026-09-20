@@ -2,7 +2,7 @@
 
 ## Current vs Planned
 
-> ⚠️ **Current state: Phase 1 only** — agent sampling loop with ring buffer, flush prints JSON to stdout. Everything below the "Target" lines is aspirational until implemented.
+> ✅ **Current state: end of Phase 2** — agent POSTs 20-sample batches to Axum, stored in Postgres (10-min E2E verified). SSE / history / correlate below are still aspirational until implemented.
 
 ## 1. High-Level Overview
 
@@ -40,15 +40,16 @@
   1. Builds a `Metric` struct (see `api-spec.md` for schema).
   2. Pushes it to an in-memory ring buffer (`VecDeque`, capacity 20).
   3. Prints live tick to stdout (`cpu={:.1}% mem={}/{}kb`).
-- Every 60s (20 ticks): calls `flush()` — currently prints batch JSON to stdout. Phase 2 swaps this to `POST /api/metrics/batch`.
+- Every 60s (20 ticks): calls `flush()` — POSTs the batch to `POST /api/metrics/batch`; on error/non-2xx the buffer is kept for retry, growth capped at 3 flush windows.
 
-### 2.2 Backend (Axum + Postgres) — Phase 2 🔲
-- `POST /api/metrics/batch` — accepts an array of ~20 samples, writes them in a single `INSERT`.
+### 2.2 Backend (Axum + Postgres) — Phase 2 (batch ✅, SSE/history/correlate 🔲)
+- `POST /api/metrics/batch` ✅ — accepts an array of ~20 samples, writes them in one transaction (parents then children, 2 round-trips); empty batch → 400, idempotent parent retry via `ON CONFLICT DO NOTHING`.
 - `GET /api/metrics/live` (SSE) — streams live samples to dashboard clients (backend-mediated, not agent-direct).
 - `GET /api/metrics/history?from=&to=` — queries Postgres for a time range, returns samples for charting.
 - `GET /api/correlate?timestamp=` — given a timestamp, returns system metrics + top N processes by resource usage at that moment.
 
-### 2.3 Storage (Postgres) — Phase 2 🔲
+### 2.3 Storage (Postgres) — Phase 2 ✅
+- Managed via `sqlx migrate` (`backend/migrations/0001_v1_samples.sql`, ported from `schema.sql`).
 - `samples` table: timestamp (PK), cpu_pct, total_mem_kb, used_mem_kb, disk_read_bytes, disk_write_bytes, net_rx_bytes (reserved), net_tx_bytes (reserved).
 - `process_samples` table: id (serial PK), timestamp → samples(timestamp), pid, process_name, cpu_pct, mem_kb.
 - Retention: raw data kept configurable window (24–48h default); older data downsampled or dropped in Phase 5.
@@ -65,14 +66,11 @@ sherlock/
 ├── agent/src/main.rs          # sampling loop, buffering, batch flush
 ├── backend/src/
 │   ├── handlers/
-│   │   ├── metrics.rs         # batch POST, history GET
-│   │   ├── correlate.rs       # correlation endpoint
-│   │   └── live.rs            # SSE endpoint
-│   ├── models/
-│   │   ├── sample.rs
-│   │   └── process_sample.rs
-│   └── db/
-│       └── mod.rs             # pool setup, queries
+│   │   ├── metrics.rs         # batch POST ✅, history GET (pending)
+│   │   ├── correlate.rs       # correlation endpoint (pending)
+│   │   └── live.rs            # SSE endpoint (pending)
+│   ├── models.rs              # ingest DTOs (BatchItem, ProcessItem)
+│   └── db.rs                  # PgPool setup
 ├── schema.sql
 ├── docker-compose.yml
 ├── .env.example

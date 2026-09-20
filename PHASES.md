@@ -12,12 +12,13 @@
 - Implement the 60s flush → for now, just print the batch instead of POSTing it.
 - **Exit criteria:** agent runs continuously, buffers correctly, flushes every 60s with the right sample count (20).
 
-## Phase 2 — Backend: Storage Path
+## Phase 2 — Backend: Storage Path ✅
 - Set up Axum + Postgres, `handlers/metrics.rs`.
 - `samples` + `process_samples` tables + migrations.
 - `POST /api/metrics/batch` — accept and insert a batch.
 - Point the agent's flush at this endpoint instead of printing.
 - **Exit criteria:** run the agent for 10+ minutes, confirm rows landing correctly in Postgres, batched (not per-sample).
+- **Status:** complete — 10-min E2E run stored 200 samples + 2000 process_samples, 3s spacing, ~1 POST/min, zero agent errors.
 
 ## Phase 3 — Live Path 🔲
 - SSE endpoint: **backend-mediated** (agent → Axum → dashboard), not agent-direct (see ARCHITECTURE §2.1/§4).
