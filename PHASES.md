@@ -19,10 +19,10 @@
 - Point the agent's flush at this endpoint instead of printing.
 - **Exit criteria:** run the agent for 10+ minutes, confirm rows landing correctly in Postgres, batched (not per-sample).
 
-## Phase 3 — Live Path
-- Add SSE endpoint (agent-direct or backend-mediated — pick whichever is simpler to wire up first).
-- Minimal dashboard page: connect to SSE, render a live-updating chart.
-- **Exit criteria:** open the dashboard, see numbers update in near real time while doing something CPU-heavy on the machine.
+## Phase 3 — Live Path 🔲
+- SSE endpoint: **backend-mediated** (agent → Axum → dashboard), not agent-direct (see ARCHITECTURE §2.1/§4).
+- Minimal dashboard page: connect to SSE, render live-updating chart.
+- **Exit criteria:** open dashboard, see numbers update in near real time during CPU-heavy workload.
 
 ## Phase 4 — History + Correlation
 - `GET /api/metrics/history?from=&to=` — query Postgres, return chartable data.
