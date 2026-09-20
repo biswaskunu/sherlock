@@ -1,5 +1,6 @@
--- sherlock: Postgres schema v1
--- Apply: psql $DATABASE_URL -f schema.sql
+-- sherlock: Postgres schema v1 (reference copy — canonical source is
+-- backend/migrations/0001_v1_samples.sql, applied via `sqlx migrate run`)
+-- Legacy apply: psql $DATABASE_URL -f schema.sql
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

@@ -6,7 +6,7 @@ use tokio::time::{interval, Duration};
 const POLL_INTERVAL_SECS: u64 = 3;
 const FLUSH_EVERY_N_SAMPLES: usize = 20; // 20 * 3s = 60s
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 struct ProcessMetric {
     pid: u32,
     name: String,
@@ -14,7 +14,7 @@ struct ProcessMetric {
     mem_kb: u64,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 struct Metric {
     timestamp: u64,
     global_cpu_pct: f32,
@@ -49,7 +49,11 @@ fn sample(sys: &mut System) -> Metric {
         });
     }
 
-    processes.sort_by(|a, b| b.cpu_pct.partial_cmp(&a.cpu_pct).unwrap());
+    processes.sort_by(|a, b| {
+        b.cpu_pct
+            .partial_cmp(&a.cpu_pct)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     processes.truncate(10); // keep top 10 by CPU per sample, not every process
 
     Metric {
@@ -113,10 +117,15 @@ async fn main() {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    let poll_secs = env_usize("AGENT_POLL_INTERVAL_SECS", POLL_INTERVAL_SECS as usize) as u64;
-    let flush_every = env_usize("AGENT_FLUSH_EVERY_N_SAMPLES", FLUSH_EVERY_N_SAMPLES);
+    // Clamp env config: 0 poll interval panics `tokio::time::interval`,
+    // 0 flush size would POST every tick and defeat batching, and absurd
+    // values would preallocate huge buffers.
+    let poll_secs =
+        env_usize("AGENT_POLL_INTERVAL_SECS", POLL_INTERVAL_SECS as usize).clamp(1, 3600) as u64;
+    let flush_every =
+        env_usize("AGENT_FLUSH_EVERY_N_SAMPLES", FLUSH_EVERY_N_SAMPLES).clamp(1, 10_000);
     // Cap retained samples at 3 flush windows so a dead backend can't OOM the agent.
-    let max_buffered = flush_every * 3;
+    let max_buffered = flush_every.saturating_mul(3);
     let url = backend_url();
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
@@ -126,6 +135,9 @@ async fn main() {
 
     let mut buffer: VecDeque<Metric> = VecDeque::with_capacity(flush_every);
     let mut ticker = interval(Duration::from_secs(poll_secs));
+    // A slow flush (up to the 10s HTTP timeout) must not cause a burst of
+    // catch-up ticks that skews the 3s sampling cadence.
+    ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
     loop {
         ticker.tick().await;
