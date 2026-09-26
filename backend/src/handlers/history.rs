@@ -6,9 +6,9 @@ use crate::AppState;
 
 #[derive(Deserialize)]
 pub struct HistoryParams {
-    pub from: Option<i64>,
-    pub to: Option<i64>,
-    pub limit: Option<i64>,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub limit: Option<String>,
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -24,22 +24,40 @@ pub async fn get_history(
     State(state): State<AppState>,
     Query(params): Query<HistoryParams>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (from, to) = match (params.from, params.to) {
-        (Some(f), Some(t)) => (f, t),
-        _ => {
-            return Err((
+    // Parse as strings (not i64) so malformed values like ?from=abc
+    // return our 400 JSON instead of Axum's default 422.
+    let parse_required = |name: &str, v: Option<String>| -> Result<i64, (StatusCode, Json<Value>)> {
+        match v {
+            Some(s) => s.parse::<i64>().map_err(|_| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({ "error": format!("invalid {name} (must be unix seconds)") })),
+                )
+            }),
+            None => Err((
                 StatusCode::BAD_REQUEST,
                 Json(json!({ "error": "from and to query params are required (unix seconds)" })),
-            ))
+            )),
         }
     };
+    let from = parse_required("from", params.from)?;
+    let to = parse_required("to", params.to)?;
     if from > to {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(json!({ "error": "from must be <= to" })),
         ));
     }
-    let limit = params.limit.unwrap_or(500).clamp(1, 2000);
+    let limit = match params.limit {
+        Some(s) => s.parse::<i64>().map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "invalid limit" })),
+            )
+        })?,
+        None => 500,
+    }
+    .clamp(1, 2000);
 
     let samples = sqlx::query_as::<_, HistorySample>(
         "SELECT timestamp, cpu_pct AS global_cpu_pct, used_mem_kb, disk_read_bytes, disk_write_bytes \

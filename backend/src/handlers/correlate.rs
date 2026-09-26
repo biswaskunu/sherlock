@@ -6,8 +6,8 @@ use crate::AppState;
 
 #[derive(Deserialize)]
 pub struct CorrelateParams {
-    pub timestamp: Option<i64>,
-    pub top_n: Option<i64>,
+    pub timestamp: Option<String>,
+    pub top_n: Option<String>,
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -33,8 +33,14 @@ pub async fn get_correlate(
     State(state): State<AppState>,
     Query(params): Query<CorrelateParams>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let requested = match params.timestamp {
-        Some(t) => t,
+    // Parse as strings so malformed values return our 400 JSON, not Axum's 422.
+    let requested: i64 = match params.timestamp {
+        Some(s) => s.parse().map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "invalid timestamp (must be unix seconds)" })),
+            )
+        })?,
         None => {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -42,7 +48,16 @@ pub async fn get_correlate(
             ))
         }
     };
-    let top_n = params.top_n.unwrap_or(10).clamp(1, 50);
+    let top_n: i64 = match params.top_n {
+        Some(s) => s.parse().map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "invalid top_n" })),
+            )
+        })?,
+        None => 10,
+    }
+    .clamp(1, 50);
 
     // Exact match first (cheap PK lookup).
     let mut sample = sqlx::query_as::<_, CorrelateSample>(
@@ -61,10 +76,12 @@ pub async fn get_correlate(
     })?;
 
     // Fall back to nearest sample within tolerance (clicks land between 3s ticks).
+    // Bounded range keeps the index on samples(timestamp) usable instead of a full scan.
     if sample.is_none() {
         sample = sqlx::query_as::<_, CorrelateSample>(
             "SELECT timestamp, cpu_pct AS global_cpu_pct, used_mem_kb, disk_read_bytes, disk_write_bytes \
-             FROM samples ORDER BY ABS(timestamp - $1) ASC LIMIT 1",
+             FROM samples WHERE timestamp BETWEEN $1 - 5 AND $1 + 5 \
+             ORDER BY ABS(timestamp - $1) ASC LIMIT 1",
         )
         .bind(requested)
         .fetch_optional(&state.pool)

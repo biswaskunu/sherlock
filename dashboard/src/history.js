@@ -1,4 +1,6 @@
-import { Chart } from 'chart.js';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 const backend = import.meta.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8080';
 
@@ -39,10 +41,12 @@ function toLocalInput(d) {
 
 let histChart = null;
 let histTimestamps = [];
+let fetchSeq = 0;
 
 fetchBtn.addEventListener('click', fetchHistory);
 
 async function fetchHistory() {
+  const mySeq = ++fetchSeq;
   const from = Math.floor(new Date(fromEl.value).getTime() / 1000);
   const to = Math.floor(new Date(toEl.value).getTime() / 1000);
   if (!Number.isFinite(from) || !Number.isFinite(to)) {
@@ -54,18 +58,28 @@ async function fetchHistory() {
     return;
   }
   histMeta.textContent = 'loading…';
+  fetchBtn.disabled = true;
   try {
     const res = await fetch(`${backend}/api/metrics/history?from=${from}&to=${to}&limit=500`);
+    if (mySeq !== fetchSeq) return; // stale response from an older click
     if (!res.ok) {
       const body = await res.text();
       histMeta.textContent = `error ${res.status}: ${body}`;
+      histTimestamps = [];
       return;
     }
     const { samples } = await res.json();
-    histTimestamps = samples.map((s) => s.timestamp);
-    const labels = samples.map((s) => new Date(s.timestamp * 1000).toLocaleTimeString());
-    const data = samples.map((s) => s.global_cpu_pct);
-    histMeta.textContent = `${samples.length} samples — click a point to correlate`;
+    const rows = Array.isArray(samples) ? samples : [];
+    if (rows.length === 0) {
+      histTimestamps = [];
+      if (histChart) { histChart.destroy(); histChart = null; }
+      histMeta.textContent = 'no samples in range — agent may not have been running then';
+      return;
+    }
+    histTimestamps = rows.map((s) => s.timestamp);
+    const labels = rows.map((s) => new Date(s.timestamp * 1000).toLocaleTimeString());
+    const data = rows.map((s) => s.global_cpu_pct);
+    histMeta.textContent = `${rows.length} samples — click a point to correlate`;
 
     if (histChart) histChart.destroy();
     histChart = new Chart(document.getElementById('hist'), {
@@ -79,11 +93,16 @@ async function fetchHistory() {
       },
     });
   } catch (e) {
+    if (mySeq !== fetchSeq) return;
+    histTimestamps = [];
     histMeta.textContent = `fetch failed: ${e.message} (is the backend running?)`;
+  } finally {
+    if (mySeq === fetchSeq) fetchBtn.disabled = false;
   }
 }
 
 async function correlate(timestamp) {
+  if (!Number.isFinite(timestamp)) return;
   corrMeta.textContent = `correlating ${new Date(timestamp * 1000).toLocaleString()}…`;
   try {
     const res = await fetch(`${backend}/api/correlate?timestamp=${timestamp}&top_n=10`);
@@ -97,6 +116,10 @@ async function correlate(timestamp) {
       return;
     }
     const { sample, top_processes } = await res.json();
+    if (!sample || !Number.isFinite(sample.timestamp)) {
+      corrMeta.textContent = 'bad correlate response';
+      return;
+    }
     corrMeta.textContent = `spike at ${new Date(sample.timestamp * 1000).toLocaleString()} — cpu ${sample.global_cpu_pct.toFixed(1)}%`;
     corrBody.innerHTML =
       (top_processes ?? [])
