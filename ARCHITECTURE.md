@@ -2,7 +2,7 @@
 
 ## Current vs Planned
 
-> ✅ **Current state: end of Phase 4** — agent POSTs 20-sample batches to Axum (stored in Postgres) and publishes each 3s tick to Axum for SSE fan-out to the Vite dashboard (with top processes). History range queries + spike correlation are implemented; only Phase 5 polish remains.
+> ✅ **Current state: end of Phase 5 (v1 done)** — agent POSTs 20-sample batches to Axum (stored in Postgres) and publishes each 3s tick to Axum for SSE fan-out to the Vite dashboard (with top processes). History range queries + spike correlation are implemented; hourly retention purge + README + demo GIF complete.
 
 ## 1. High-Level Overview
 

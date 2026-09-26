@@ -20,7 +20,7 @@ Local Rust observability agent: samples system metrics every 3s, streams live vi
 | 2 — Backend ingestion | ✅ | Axum + Postgres batch POST (10-min E2E verified) |
 | 3 — Live path | ✅ | SSE fan-out + Vite dashboard (live charts + top processes) |
 | 4 — History + correlation | ✅ | Time-range queries + spike→process join + History tab |
-| 5 — Polish + demo | 🔲 | Retention, README finish, demo GIF |
+| 5 — Polish + demo | ✅ | Hourly retention purge, README finish, demo GIF |
 
 ## Prerequisites
 
@@ -67,8 +67,13 @@ in-memory only and never persisted. At 3s sampling + top-10 processes/tick,
 
 ## Demo
 
-`docs/demo.gif` (pending): live view → `stress-ng -c 4 -t 20` spike →
-History tab (last hour) → click spike → correlate table names the culprit.
+![sherlock demo: live view → spike → history → correlate](docs/demo.gif)
+
+Walkthrough rendered from a real spike run (4× `yes` + `sha256sum`,
+peak 41.7%): live SSE view → deliberate spike → History tab (80 samples,
+peak marked) → click spike → `GET /api/correlate` names the culprits
+(`yes` ×4 + `sha256sum`, ~98% CPU each). To reproduce live: run the full
+stack below, spike the CPU, then open History and click the peak.
 
 ## Live Dashboard (Phase 3)
 
@@ -96,6 +101,7 @@ sherlock/
 │       └── db/         # PgPool setup
 │   └── migrations/     # sqlx migrations (0001 samples + process_samples)
 ├── dashboard/          # Vite + Chart.js live + history views (SSE live, REST history/correlate)
+├── docs/demo.gif       # Phase 5 demo: live → spike → history → correlate
 ├── schema.sql          # Postgres migrations
 ├── docker-compose.yml  # local Postgres
 ├── .env.example        # env template
@@ -116,5 +122,5 @@ sherlock/
 ## Notes for AI Handoff
 
 - Agent flush POSTs 20-sample batches to `POST /api/metrics/batch` (keeps buffer + retries on failure)
-- `ARCHITECTURE.md` describes target architecture; current state is Phase 5 in progress (retention done, demo GIF pending)
+- `ARCHITECTURE.md` describes target architecture; current state is end of Phase 5 (v1 done: storage + live + history/correlate + retention + demo)
 - `PHASES.md` has the canonical phase order + exit criteria — follow that for sequencing

@@ -33,11 +33,12 @@
 - **Exit criteria:** deliberately spike CPU (e.g. run a heavy build), find it later in the history view, correctly identify the culprit process.
 - **Status:** complete — history range query + correlate (exact with nearest ±5s fallback) wired in Axum; dashboard History tab with range picker, Chart.js render, click-point-to-correlate table. Hardened: malformed params return 400 JSON (not 422), limit clamped 1..2000, top_n 1..50, nearest lookup index-bounded; dashboard guards empty/race/stale states.
 
-## Phase 5 — Polish for Resume/Demo
+## Phase 5 — Polish for Resume/Demo ✅
 - Basic retention policy (drop/downsample data older than N hours).
 - README with architecture diagram + setup instructions.
 - Record a short demo GIF/video showing: live view → deliberate spike → history view → correlation.
 - Deploy backend (Railway) if you want a live demo link; agent stays local (it's inherently a local tool) — document that clearly in the README so it's not read as a missing deployment.
+- **Status:** complete — hourly `DELETE FROM samples` purge (`RETENTION_HOURS=48` default, `process_samples` via cascade, verified: backdated rows deleted, fresh kept); README has prerequisites/setup/retention/local-only note; `docs/demo.gif` walkthrough rendered from a real spike run (41.7% peak → `yes` ×4 + `sha256sum` via correlate). Deploy deliberately skipped: local-only v1, documented in README.
 
 ## Scope Discipline Notes
 - Don't add Windows/Mac support until Linux v1 is fully working end-to-end.
