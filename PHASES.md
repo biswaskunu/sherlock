@@ -20,10 +20,11 @@
 - **Exit criteria:** run the agent for 10+ minutes, confirm rows landing correctly in Postgres, batched (not per-sample).
 - **Status:** complete — 10-min E2E run stored 200 samples + 2000 process_samples, 3s spacing, ~1 POST/min, zero agent errors.
 
-## Phase 3 — Live Path 🔲
+## Phase 3 — Live Path ✅
 - SSE endpoint: **backend-mediated** (agent → Axum → dashboard), not agent-direct (see ARCHITECTURE §2.1/§4).
 - Minimal dashboard page: connect to SSE, render live-updating chart.
 - **Exit criteria:** open dashboard, see numbers update in near real time during CPU-heavy workload.
+- **Status:** complete — agent publishes each tick to `POST /api/metrics/live/publish`, Axum fans out via `GET /api/metrics/live` SSE to Vite + Chart.js dashboard with top-process table.
 
 ## Phase 4 — History + Correlation
 - `GET /api/metrics/history?from=&to=` — query Postgres, return chartable data.

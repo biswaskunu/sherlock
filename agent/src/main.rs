@@ -6,7 +6,7 @@ use tokio::time::{interval, Duration};
 const POLL_INTERVAL_SECS: u64 = 3;
 const FLUSH_EVERY_N_SAMPLES: usize = 20; // 20 * 3s = 60s
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct ProcessMetric {
     pid: u32,
     name: String,
@@ -14,7 +14,7 @@ struct ProcessMetric {
     mem_kb: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct Metric {
     timestamp: u64,
     global_cpu_pct: f32,
@@ -79,6 +79,15 @@ fn backend_url() -> String {
     format!("http://{host}:{port}/api/metrics/batch")
 }
 
+fn live_url() -> String {
+    if let Ok(url) = std::env::var("BACKEND_LIVE_URL") {
+        return url;
+    }
+    let host = std::env::var("BACKEND_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port = std::env::var("BACKEND_PORT").unwrap_or_else(|_| "8080".to_string());
+    format!("http://{host}:{port}/api/metrics/live/publish")
+}
+
 fn env_usize(name: &str, default: usize) -> usize {
     std::env::var(name)
         .ok()
@@ -105,33 +114,53 @@ async fn flush(client: &reqwest::Client, url: &str, buffer: &mut VecDeque<Metric
     }
 }
 
-/// Bound memory while the backend is unreachable: drop oldest samples past the cap.
+// Bound memory while the backend is unreachable: drop oldest samples past the cap.
 fn drop_oldest_over(buffer: &mut VecDeque<Metric>, max_buffered: usize) {
     while buffer.len() > max_buffered {
         buffer.pop_front();
     }
 }
 
+/// Live path: fire-and-forget single-tick POST. Lossy by design — never
+/// retries, never touches the batch buffer, short timeout so a slow
+/// backend can't stall the 3s sampling cadence.
+async fn publish_live(client: reqwest::Client, url: String, metric: Metric) {
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        client.post(&url).json(&metric).send(),
+    )
+    .await
+    {
+        Ok(Ok(resp)) if resp.status().is_success() => {}
+        Ok(Ok(resp)) => eprintln!("live publish rejected ({})", resp.status()),
+        Ok(Err(e)) => eprintln!("live publish failed ({e})"),
+        Err(_) => eprintln!("live publish timed out"),
+    }
+}
+
 #[tokio::main]
 async fn main() {
+
     let mut sys = System::new_all();
     sys.refresh_all();
 
     // Clamp env config: 0 poll interval panics `tokio::time::interval`,
     // 0 flush size would POST every tick and defeat batching, and absurd
     // values would preallocate huge buffers.
-    let poll_secs =
-        env_usize("AGENT_POLL_INTERVAL_SECS", POLL_INTERVAL_SECS as usize).clamp(1, 3600) as u64;
-    let flush_every =
-        env_usize("AGENT_FLUSH_EVERY_N_SAMPLES", FLUSH_EVERY_N_SAMPLES).clamp(1, 10_000);
+    let poll_secs = env_usize("AGENT_POLL_INTERVAL_SECS", POLL_INTERVAL_SECS as usize).clamp(1, 3600) as u64;
+    let flush_every = env_usize("AGENT_FLUSH_EVERY_N_SAMPLES", FLUSH_EVERY_N_SAMPLES).clamp(1, 10_000);
+
     // Cap retained samples at 3 flush windows so a dead backend can't OOM the agent.
     let max_buffered = flush_every.saturating_mul(3);
     let url = backend_url();
+    let live = live_url();
+    
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .expect("failed to build HTTP client");
     println!("agent posting to {url} every {flush_every} samples ({poll_secs}s poll)");
+    println!("agent live publishing to {live} every tick");
 
     let mut buffer: VecDeque<Metric> = VecDeque::with_capacity(flush_every);
     let mut ticker = interval(Duration::from_secs(poll_secs));
@@ -147,6 +176,8 @@ async fn main() {
             "tick: cpu={:.1}% mem={}/{}kb",
             metric.global_cpu_pct, metric.used_mem_kb, metric.total_mem_kb
         );
+        // Live path: non-blocking, lossy; batch path below is unaffected.
+        tokio::spawn(publish_live(client.clone(), live.clone(), metric.clone()));
         buffer.push_back(metric);
 
         if buffer.len() >= flush_every {

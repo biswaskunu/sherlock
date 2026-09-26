@@ -1,9 +1,22 @@
-use axum::{routing::{get, post}, Router};
+use axum::{
+    http::{HeaderValue, Method},
+    routing::{get, post},
+    Router,
+};
 use std::net::SocketAddr;
+use tower_http::cors::CorsLayer;
 
 mod db;
 mod handlers;
 mod models;
+
+use models::LiveSample;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub pool: sqlx::PgPool,
+    pub live_tx: tokio::sync::broadcast::Sender<LiveSample>,
+}
 
 async fn health() -> &'static str {
     "ok"
@@ -27,10 +40,33 @@ async fn main() {
         .expect("failed to connect to Postgres");
     tracing::info!("connected to Postgres");
 
+    // In-memory fan-out for live ticks. Cap 32 keeps memory bounded;
+    // slow dashboards skip lagged ticks (see handlers::live::sse).
+    let (live_tx, _) = tokio::sync::broadcast::channel::<LiveSample>(32);
+    let state = AppState { pool, live_tx };
+
+    // Separate frontend server (Vite :5173) is cross-origin, so allow it.
+    let dashboard_origin = std::env::var("DASHBOARD_ORIGIN")
+        .unwrap_or_else(|_| "http://localhost:5173".to_string());
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST])
+        .allow_headers([axum::http::header::CONTENT_TYPE])
+        .allow_origin(
+            dashboard_origin
+                .parse::<HeaderValue>()
+                .expect("invalid DASHBOARD_ORIGIN"),
+        );
+
     let app = Router::new()
         .route("/health", get(health))
         .route("/api/metrics/batch", post(handlers::metrics::post_batch))
-        .with_state(pool);
+        .route(
+            "/api/metrics/live/publish",
+            post(handlers::live::publish),
+        )
+        .route("/api/metrics/live", get(handlers::live::sse))
+        .layer(cors)
+        .with_state(state);
 
     let addr: SocketAddr = format!("{host}:{port}").parse().expect("invalid bind addr");
     tracing::info!("backend listening on {addr}");

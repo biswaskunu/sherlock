@@ -34,15 +34,24 @@ Ingest a batch of ~20 samples (60s window) from the agent.
 { "error": "empty batch" }
 ```
 
+## POST /api/metrics/live/publish
+
+Agent pushes one tick every ~3s. Broadcast in-memory only, never persisted.
+
+**Request:** single `LiveSample` (same shape as one batch item, incl. top-10 `processes`).
+
+**Response (202):** `{ "ok": true }` (also 200-OK shape when no dashboards connected — live is lossy).
+
 ## GET /api/metrics/live (SSE)
 
-Streams live samples as they're flushed by the agent.
+Streams live samples as they're published by the agent (backend-mediated fan-out,
+`broadcast::channel(32)`, lagged ticks skipped, `keep-alive` every 15s).
 
 ```
 Content-Type: text/event-stream
 
-data: {"timestamp":1718900000,"global_cpu_pct":23.5,...}
-data: {"timestamp":1718900003,"global_cpu_pct":24.1,...}
+data: {"timestamp":1718900000,"global_cpu_pct":23.5,...,"processes":[...]}
+data: {"timestamp":1718900003,"global_cpu_pct":24.1,...,"processes":[...]}
 ```
 
 ## GET /api/metrics/history

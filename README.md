@@ -8,7 +8,7 @@ Local Rust observability agent: samples system metrics every 3s, streams live vi
 |-------|------|
 | Agent | Rust + tokio + sysinfo |
 | Backend | Axum + SQLx + Postgres |
-| Dashboard | SSE + Chart.js (planned) |
+| Dashboard | SSE + Chart.js + Vite (separate dev server :5173) |
 | Infra | Docker + Railway (backend) |
 
 ## Current Phase Status
@@ -18,7 +18,7 @@ Local Rust observability agent: samples system metrics every 3s, streams live vi
 | 0 — Groundwork | ✅ | sysinfo polling, /proc understanding |
 | 1 — Agent sampling | ✅ | Metric struct, ring buffer, 60s flush to stdout |
 | 2 — Backend ingestion | ✅ | Axum + Postgres batch POST (10-min E2E verified) |
-| 3 — Live path | 🔲 | SSE streaming + dashboard |
+| 3 — Live path | ✅ | SSE fan-out + Vite dashboard (live charts + top processes) |
 | 4 — History + correlation | 🔲 | Time-range queries + spike→process join |
 | 5 — Polish + demo | 🔲 | Retention, README finish, demo GIF |
 
@@ -42,7 +42,19 @@ sqlx migrate run --source backend/migrations
 # 3. Start backend
 cargo run -p backend
 
-# 4. Start agent (flush POSTs 20-sample batches to backend)
+# 4. Start agent (flush POSTs 20-sample batches to backend, publishes each tick for live)
+cargo run -p agent
+```
+
+## Live Dashboard (Phase 3)
+
+```bash
+# terminal 1: backend (needs DATABASE_URL)
+cargo run -p backend
+# terminal 2: dashboard
+npm --prefix dashboard install
+npm --prefix dashboard run dev   # http://localhost:5173
+# terminal 3: agent
 cargo run -p agent
 ```
 
@@ -54,10 +66,11 @@ sherlock/
 │   └── src/main.rs     # poll loop, buffering, batch POST flush
 ├── backend/            # Axum server
 │   └── src/
-│       ├── handlers/   # batch POST ✅; history, correlate, SSE (pending)
-│       ├── models/     # ingest DTOs (BatchItem, ProcessItem)
+│       ├── handlers/   # batch POST ✅; live SSE ✅; history, correlate (pending)
+│       ├── models/     # ingest DTOs (BatchItem, ProcessItem, LiveSample)
 │       └── db/         # PgPool setup
 │   └── migrations/     # sqlx migrations (0001 samples + process_samples)
+├── dashboard/          # Vite + Chart.js live view (EventSource → :8080/api/metrics/live)
 ├── schema.sql          # Postgres migrations
 ├── docker-compose.yml  # local Postgres
 ├── .env.example        # env template

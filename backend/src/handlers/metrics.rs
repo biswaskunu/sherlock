@@ -1,11 +1,10 @@
 use axum::{extract::State, http::StatusCode, Json};
 use serde_json::{json, Value};
-use sqlx::PgPool;
 
-use crate::models::BatchItem;
+use crate::{models::BatchItem, AppState};
 
 pub async fn post_batch(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
     Json(batch): Json<Vec<BatchItem>>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     if batch.is_empty() {
@@ -15,12 +14,13 @@ pub async fn post_batch(
         ));
     }
 
-    let mut tx = pool.begin().await.map_err(internal_error)?;
+    let mut tx = state.pool.begin().await.map_err(internal_error)?;
 
     // Parent rows first: process_samples.timestamp FK-references samples(timestamp).
     {
         let mut qb =
             sqlx::QueryBuilder::new("INSERT INTO samples (timestamp, cpu_pct, total_mem_kb, used_mem_kb, disk_read_bytes, disk_write_bytes) ");
+
         qb.push_values(&batch, |mut b, s| {
             b.push_bind(s.timestamp)
                 .push_bind(s.global_cpu_pct)
@@ -29,11 +29,13 @@ pub async fn post_batch(
                 .push_bind(s.disk_read_bytes)
                 .push_bind(s.disk_write_bytes);
         });
+
         qb.push(" ON CONFLICT (timestamp) DO NOTHING");
         qb.build()
             .execute(&mut *tx)
             .await
             .map_err(internal_error)?;
+
     }
 
     // Child rows, one per (sample, process). Agent caps at top-10 by CPU,
@@ -63,6 +65,7 @@ pub async fn post_batch(
     tx.commit().await.map_err(internal_error)?;
 
     Ok(Json(json!({ "inserted": batch.len() })))
+    
 }
 
 fn internal_error(e: impl std::fmt::Display) -> (StatusCode, Json<Value>) {

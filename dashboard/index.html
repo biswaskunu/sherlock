@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sherlock — live</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 24px; background: #0e1116; color: #e6e6e6; }
+      header { display: flex; align-items: center; gap: 12px; }
+      #dot { width: 12px; height: 12px; border-radius: 50%; background: #666; }
+      #dot.ok { background: #3fb950; }
+      #dot.bad { background: #f85149; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+      .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+      th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #30363d; }
+      #meta { color: #8b949e; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span id="dot"></span>
+      <h1>sherlock live</h1>
+      <span id="meta">connecting…</span>
+    </header>
+    <div class="grid">
+      <div class="card"><h3>CPU %</h3><canvas id="cpu"></canvas></div>
+      <div class="card"><h3>Used mem (MB)</h3><canvas id="mem"></canvas></div>
+    </div>
+    <div class="card" style="margin-top: 16px">
+      <h3>Top processes (by CPU)</h3>
+      <table>
+        <thead><tr><th>PID</th><th>Name</th><th>CPU %</th><th>Mem KB</th></tr></thead>
+        <tbody id="procs"><tr><td colspan="4">waiting for ticks…</td></tr></tbody>
+      </table>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
