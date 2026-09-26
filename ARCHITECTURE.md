@@ -53,7 +53,7 @@
 - Managed via `sqlx migrate` (`backend/migrations/0001_v1_samples.sql`, ported from `schema.sql`).
 - `samples` table: timestamp (PK), cpu_pct, total_mem_kb, used_mem_kb, disk_read_bytes, disk_write_bytes, net_rx_bytes (reserved), net_tx_bytes (reserved).
 - `process_samples` table: id (serial PK), timestamp → samples(timestamp), pid, process_name, cpu_pct, mem_kb.
-- Retention: raw data kept configurable window (24–48h default); older data downsampled or dropped in Phase 5.
+- Retention: raw data kept `RETENTION_HOURS` (default 48h) via backend hourly `DELETE FROM samples` (`backend/src/retention.rs`, `process_samples` via `ON DELETE CASCADE`); older data dropped in Phase 5 (no downsampling rollups in v1).
 - **Note**: `net_rx_bytes` / `net_tx_bytes` columns exist but agent doesn't populate them yet — `sysinfo` doesn't expose global network throughput; interface-level stats may be added later.
 
 ### 2.4 Dashboard (minimal frontend) — Phase 3 ✅ (live view) + Phase 4 ✅ (history view)

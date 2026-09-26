@@ -6,10 +6,10 @@ Local Rust observability agent: samples system metrics every 3s, streams live vi
 
 | Layer | Tech |
 |-------|------|
-| Agent | Rust + tokio + sysinfo |
+| Agent | Rust + tokio + sysinfo (runs on the machine being monitored — local only by design) |
 | Backend | Axum + SQLx + Postgres |
 | Dashboard | SSE + Chart.js + Vite (separate dev server :5173) |
-| Infra | Docker + Railway (backend) |
+| Infra | Docker (local Postgres) — no cloud deploy; agent must stay local |
 
 ## Current Phase Status
 
@@ -21,6 +21,13 @@ Local Rust observability agent: samples system metrics every 3s, streams live vi
 | 3 — Live path | ✅ | SSE fan-out + Vite dashboard (live charts + top processes) |
 | 4 — History + correlation | ✅ | Time-range queries + spike→process join + History tab |
 | 5 — Polish + demo | 🔲 | Retention, README finish, demo GIF |
+
+## Prerequisites
+
+- Rust toolchain + `sqlx-cli` (`cargo install sqlx-cli --no-default-features --features postgres`)
+- Postgres 16 (system service on :5432 — see `.env`; `docker-compose.yml` postgres is a stopped fallback)
+- Node 18+ / npm (dashboard), `ffmpeg` (to reproduce the demo GIF)
+- Copy env: `cp .env.example .env` (sets `DATABASE_URL`, `BACKEND_HOST/PORT`, `DASHBOARD_ORIGIN`, `RETENTION_HOURS=48`)
 
 ## Quick Start (Agent Only)
 
@@ -46,6 +53,23 @@ cargo run -p backend
 cargo run -p agent
 ```
 
+> **Local-only note:** the agent samples the machine it runs on, so it is
+> intentionally never deployed. Only the backend + dashboard could be hosted;
+> for this v1 everything runs on localhost.
+
+## Retention (Phase 5)
+
+Backend deletes raw `samples` older than `RETENTION_HOURS` (default 48h) on
+startup + every `RETENTION_INTERVAL_SECS` (default 3600s).
+`process_samples` are cleaned via `ON DELETE CASCADE`; live SSE ticks are
+in-memory only and never persisted. At 3s sampling + top-10 processes/tick,
+48h ≈ 57.6k samples + ~576k process rows. Tune via `.env`.
+
+## Demo
+
+`docs/demo.gif` (pending): live view → `stress-ng -c 4 -t 20` spike →
+History tab (last hour) → click spike → correlate table names the culprit.
+
 ## Live Dashboard (Phase 3)
 
 ```bash
@@ -68,6 +92,7 @@ sherlock/
 │   └── src/
 │       ├── handlers/   # batch POST ✅; live SSE ✅; history ✅, correlate ✅
 │       ├── models/     # ingest DTOs (BatchItem, ProcessItem, LiveSample)
+│       ├── retention.rs # Phase 5: hourly DELETE of samples older than RETENTION_HOURS
 │       └── db/         # PgPool setup
 │   └── migrations/     # sqlx migrations (0001 samples + process_samples)
 ├── dashboard/          # Vite + Chart.js live + history views (SSE live, REST history/correlate)
@@ -91,5 +116,5 @@ sherlock/
 ## Notes for AI Handoff
 
 - Agent flush POSTs 20-sample batches to `POST /api/metrics/batch` (keeps buffer + retries on failure)
-- `ARCHITECTURE.md` describes target architecture; current state is end of Phase 4 (storage + live + history/correlate done, Phase 5 polish pending)
+- `ARCHITECTURE.md` describes target architecture; current state is Phase 5 in progress (retention done, demo GIF pending)
 - `PHASES.md` has the canonical phase order + exit criteria — follow that for sequencing

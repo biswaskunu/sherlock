@@ -9,6 +9,7 @@ use tower_http::cors::CorsLayer;
 mod db;
 mod handlers;
 mod models;
+mod retention;
 
 use models::LiveSample;
 
@@ -39,6 +40,15 @@ async fn main() {
         .await
         .expect("failed to connect to Postgres");
     tracing::info!("connected to Postgres");
+
+    // Retention: drop raw samples older than RETENTION_HOURS (default 48h).
+    // process_samples cleaned via ON DELETE CASCADE. In-memory live ticks
+    // are never persisted, so nothing to retain there.
+    let (retention_hours, retention_interval) = retention::config_from_env();
+    retention::spawn(pool.clone(), retention_hours, retention_interval);
+    tracing::info!(
+        "retention enabled: keep {retention_hours}h, purge every {retention_interval}s"
+    );
 
     // In-memory fan-out for live ticks. Cap 32 keeps memory bounded;
     // slow dashboards skip lagged ticks (see handlers::live::sse).
