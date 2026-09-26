@@ -101,3 +101,11 @@ Exact match first; falls back to the nearest sample within ±5s
 ```json
 { "error": "no sample found for timestamp" }
 ```
+
+## Retention (no endpoint — backend background task)
+
+On startup and every `RETENTION_INTERVAL_SECS` (default `3600`), the backend
+deletes raw `samples` older than `RETENTION_HOURS` (default `48`).
+`process_samples` rows are removed via `ON DELETE CASCADE`; in-memory live
+SSE ticks are never persisted so there is nothing to retain there.
+See `backend/src/retention.rs`; tune via `.env`.

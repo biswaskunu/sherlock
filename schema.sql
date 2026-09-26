@@ -31,6 +31,9 @@ CREATE INDEX idx_samples_timestamp ON samples(timestamp);
 CREATE INDEX idx_process_samples_timestamp ON process_samples(timestamp);
 CREATE INDEX idx_process_samples_pid ON process_samples(pid);
 
--- Optional: retention — drop raw data older than 48h (run via cron/pg_cron)
+-- Retention (implemented in backend/src/retention.rs, Phase 5):
+-- on startup + every RETENTION_INTERVAL_SECS (default 3600s), the backend runs
+--   DELETE FROM samples WHERE timestamp < <now - RETENTION_HOURS (default 48h)>;
+-- process_samples rows go along via ON DELETE CASCADE (no separate delete needed).
+-- Manual equivalent:
 -- DELETE FROM samples WHERE timestamp < EXTRACT(EPOCH FROM NOW() - INTERVAL '48 hours')::BIGINT;
--- DELETE FROM process_samples WHERE timestamp < EXTRACT(EPOCH FROM NOW() - INTERVAL '48 hours')::BIGINT;

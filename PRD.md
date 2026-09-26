@@ -29,7 +29,7 @@ Primarily a personal tool / portfolio piece. Secondary audience: anyone debuggin
 ### 5.3 Durable Storage Path
 - Agent batches 20 samples (1 minute) and POSTs the batch to the Axum backend.
 - Backend writes batch to Postgres in a single insert.
-- Historical data retained with a basic retention/downsampling policy (raw data for N hours, aggregated beyond that).
+- Historical data retained with a basic retention policy (raw data for N hours, then deleted; v1 does delete-only, no downsampled aggregates — see ARCHITECTURE.md §2.3).
 
 ### 5.4 Spike Correlation
 - Given a system-level spike (CPU/memory/disk) at timestamp T, identify which process(es) had elevated usage at that same timestamp.

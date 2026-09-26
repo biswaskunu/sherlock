@@ -33,9 +33,9 @@ Local Rust observability agent: samples system metrics every 3s, streams live vi
 
 ```bash
 cd ~/Projects/sherlock
-cargo build
-cargo run
-# Watch CPU/mem scroll every 3s; 60s flushes print JSON to stdout
+cargo run -p agent
+# Watch CPU/mem scroll every 3s; every 60s the 20-sample buffer POSTs to
+# the backend (needs it running — see below), otherwise it's kept for retry.
 ```
 
 ## Running Full Stack (Phase 2+)
