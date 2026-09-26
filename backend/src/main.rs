@@ -65,6 +65,8 @@ async fn main() {
             post(handlers::live::publish),
         )
         .route("/api/metrics/live", get(handlers::live::sse))
+        .route("/api/metrics/history", get(handlers::history::get_history))
+        .route("/api/correlate", get(handlers::correlate::get_correlate))
         .layer(cors)
         .with_state(state);
 
