@@ -66,11 +66,11 @@ sherlock/
 │   └── src/main.rs     # poll loop, buffering, batch POST flush
 ├── backend/            # Axum server
 │   └── src/
-│       ├── handlers/   # batch POST ✅; live SSE ✅; history, correlate (pending)
+│       ├── handlers/   # batch POST ✅; live SSE ✅; history ✅, correlate ✅
 │       ├── models/     # ingest DTOs (BatchItem, ProcessItem, LiveSample)
 │       └── db/         # PgPool setup
 │   └── migrations/     # sqlx migrations (0001 samples + process_samples)
-├── dashboard/          # Vite + Chart.js live view (EventSource → :8080/api/metrics/live)
+├── dashboard/          # Vite + Chart.js live + history views (SSE live, REST history/correlate)
 ├── schema.sql          # Postgres migrations
 ├── docker-compose.yml  # local Postgres
 ├── .env.example        # env template
@@ -91,5 +91,5 @@ sherlock/
 ## Notes for AI Handoff
 
 - Agent flush POSTs 20-sample batches to `POST /api/metrics/batch` (keeps buffer + retries on failure)
-- `ARCHITECTURE.md` describes target architecture; current state is end of Phase 2 (storage path done, SSE/history/correlate pending)
+- `ARCHITECTURE.md` describes target architecture; current state is end of Phase 4 (storage + live + history/correlate done, Phase 5 polish pending)
 - `PHASES.md` has the canonical phase order + exit criteria — follow that for sequencing

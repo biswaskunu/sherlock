@@ -31,7 +31,7 @@
 - `GET /api/correlate?timestamp=` — join `samples` + `process_samples`, return top processes at that time.
 - Dashboard: history view with time range picker, click-a-spike-to-correlate interaction.
 - **Exit criteria:** deliberately spike CPU (e.g. run a heavy build), find it later in the history view, correctly identify the culprit process.
-- **Status:** complete — history range query + correlate (exact with nearest ±5s fallback) wired in Axum; dashboard History tab with range picker, Chart.js render, click-point-to-correlate table.
+- **Status:** complete — history range query + correlate (exact with nearest ±5s fallback) wired in Axum; dashboard History tab with range picker, Chart.js render, click-point-to-correlate table. Hardened: malformed params return 400 JSON (not 422), limit clamped 1..2000, top_n 1..50, nearest lookup index-bounded; dashboard guards empty/race/stale states.
 
 ## Phase 5 — Polish for Resume/Demo
 - Basic retention policy (drop/downsample data older than N hours).

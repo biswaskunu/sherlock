@@ -61,7 +61,9 @@ Query historical samples for a time range.
 **Query params:**
 - `from` (required): Unix timestamp seconds
 - `to` (required): Unix timestamp seconds
-- `limit` (optional): max samples back, default 500
+- `limit` (optional): max samples back, default 500, clamped 1..2000
+
+**Errors (400):** missing `from`/`to`, non-numeric values, `from > to`, non-numeric `limit`.
 
 **Response (200):**
 ```json
@@ -75,10 +77,14 @@ Query historical samples for a time range.
 ## GET /api/correlate
 
 Given a timestamp, return the system sample + top processes at that moment.
+Exact match first; falls back to the nearest sample within ±5s
+(clicks land between 3s ticks). Beyond tolerance → 404.
 
 **Query params:**
 - `timestamp` (required): Unix timestamp seconds
-- `top_n` (optional): number of processes to return, default 10
+- `top_n` (optional): number of processes to return, default 10, clamped 1..50
+
+**Errors (400):** missing/non-numeric `timestamp` or `top_n`.
 
 **Response (200):**
 ```json

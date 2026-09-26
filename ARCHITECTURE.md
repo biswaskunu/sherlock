@@ -2,7 +2,7 @@
 
 ## Current vs Planned
 
-> ✅ **Current state: end of Phase 3** — agent POSTs 20-sample batches to Axum (stored in Postgres) and publishes each 3s tick to Axum for SSE fan-out to the Vite dashboard (with top processes). History / correlate below are still aspirational until implemented.
+> ✅ **Current state: end of Phase 4** — agent POSTs 20-sample batches to Axum (stored in Postgres) and publishes each 3s tick to Axum for SSE fan-out to the Vite dashboard (with top processes). History range queries + spike correlation are implemented; only Phase 5 polish remains.
 
 ## 1. High-Level Overview
 
@@ -42,12 +42,12 @@
   3. Prints live tick to stdout (`cpu={:.1}% mem={}/{}kb`).
 - Every 60s (20 ticks): calls `flush()` — POSTs the batch to `POST /api/metrics/batch`; on error/non-2xx the buffer is kept for retry, growth capped at 3 flush windows.
 
-### 2.2 Backend (Axum + Postgres) — Phase 2 (batch ✅), Phase 3 (SSE ✅, history/correlate 🔲)
+### 2.2 Backend (Axum + Postgres) — Phase 2 (batch ✅), Phase 3 (SSE ✅), Phase 4 (history/correlate ✅)
 - `POST /api/metrics/batch` ✅ — accepts an array of ~20 samples, writes them in one transaction (parents then children, 2 round-trips); empty batch → 400, idempotent parent retry via `ON CONFLICT DO NOTHING`.
 - `POST /api/metrics/live/publish` ✅ — accepts a single tick, broadcasts via `broadcast::channel(32)`; in-memory only, no DB write. Always 202-ish ack (live is lossy).
 - `GET /api/metrics/live` (SSE) ✅ — streams live samples to dashboard clients (backend-mediated, not agent-direct); lagged ticks skipped, keep-alive every 15s; CORS allows `DASHBOARD_ORIGIN` (Vite :5173).
-- `GET /api/metrics/history?from=&to=` — queries Postgres for a time range, returns samples for charting.
-- `GET /api/correlate?timestamp=` — given a timestamp, returns system metrics + top N processes by resource usage at that moment.
+- `GET /api/metrics/history?from=&to=&limit=` ✅ — queries Postgres for a time range, returns samples for charting. `from`/`to` required (400 otherwise, incl. malformed values); `from <= to` enforced; `limit` default 500, clamped 1..2000.
+- `GET /api/correlate?timestamp=&top_n=` ✅ — given a timestamp, returns system metrics + top N processes by resource usage at that moment. Exact PK lookup first, then nearest sample within ±5s (index-bounded range); 404 beyond tolerance. `top_n` default 10, clamped 1..50.
 
 ### 2.3 Storage (Postgres) — Phase 2 ✅
 - Managed via `sqlx migrate` (`backend/migrations/0001_v1_samples.sql`, ported from `schema.sql`).
@@ -56,9 +56,9 @@
 - Retention: raw data kept configurable window (24–48h default); older data downsampled or dropped in Phase 5.
 - **Note**: `net_rx_bytes` / `net_tx_bytes` columns exist but agent doesn't populate them yet — `sysinfo` doesn't expose global network throughput; interface-level stats may be added later.
 
-### 2.4 Dashboard (minimal frontend) — Phase 3 ✅ (live view)
+### 2.4 Dashboard (minimal frontend) — Phase 3 ✅ (live view) + Phase 4 ✅ (history view)
 - Live view ✅: separate Vite server (`dashboard/`, Chart.js), `EventSource` to `GET /api/metrics/live`, rolling 60-point charts + top-process table.
-- History view: time-range picker, fetches from `/api/metrics/history`, renders charts + a "click spike to see processes" interaction backed by `/api/correlate`.
+- History view ✅: Live/History tab toggle, time-range picker (`datetime-local`, defaults to last hour), fetches from `/api/metrics/history` (limit 500), renders Chart.js line + a "click spike to see processes" interaction backed by `/api/correlate` (nearest ±5s).
 
 ## 3. Folder Structure (target)
 
@@ -67,9 +67,10 @@ sherlock/
 ├── agent/src/main.rs          # sampling loop, buffering, batch flush
 ├── backend/src/
 │   ├── handlers/
-│   │   ├── metrics.rs         # batch POST ✅, history GET (pending)
-│   │   ├── correlate.rs       # correlation endpoint (pending)
-│   │   └── live.rs            # SSE endpoint (pending)
+│   │   ├── metrics.rs         # batch POST ✅
+│   │   ├── history.rs         # history GET ✅
+│   │   ├── correlate.rs       # correlation endpoint ✅
+│   │   └── live.rs            # SSE endpoint ✅
 │   ├── models.rs              # ingest DTOs (BatchItem, ProcessItem)
 │   └── db.rs                  # PgPool setup
 ├── schema.sql
