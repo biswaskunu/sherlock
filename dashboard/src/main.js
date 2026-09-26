@@ -1,4 +1,5 @@
 import { Chart, registerables } from 'chart.js';
+import './history.js';
 
 Chart.register(...registerables);
 

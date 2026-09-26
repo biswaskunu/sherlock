@@ -19,7 +19,7 @@ Local Rust observability agent: samples system metrics every 3s, streams live vi
 | 1 — Agent sampling | ✅ | Metric struct, ring buffer, 60s flush to stdout |
 | 2 — Backend ingestion | ✅ | Axum + Postgres batch POST (10-min E2E verified) |
 | 3 — Live path | ✅ | SSE fan-out + Vite dashboard (live charts + top processes) |
-| 4 — History + correlation | 🔲 | Time-range queries + spike→process join |
+| 4 — History + correlation | ✅ | Time-range queries + spike→process join + History tab |
 | 5 — Polish + demo | 🔲 | Retention, README finish, demo GIF |
 
 ## Quick Start (Agent Only)

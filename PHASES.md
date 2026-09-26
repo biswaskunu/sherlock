@@ -26,11 +26,12 @@
 - **Exit criteria:** open dashboard, see numbers update in near real time during CPU-heavy workload.
 - **Status:** complete — agent publishes each tick to `POST /api/metrics/live/publish`, Axum fans out via `GET /api/metrics/live` SSE to Vite + Chart.js dashboard with top-process table.
 
-## Phase 4 — History + Correlation
+## Phase 4 — History + Correlation ✅
 - `GET /api/metrics/history?from=&to=` — query Postgres, return chartable data.
 - `GET /api/correlate?timestamp=` — join `samples` + `process_samples`, return top processes at that time.
 - Dashboard: history view with time range picker, click-a-spike-to-correlate interaction.
 - **Exit criteria:** deliberately spike CPU (e.g. run a heavy build), find it later in the history view, correctly identify the culprit process.
+- **Status:** complete — history range query + correlate (exact with nearest ±5s fallback) wired in Axum; dashboard History tab with range picker, Chart.js render, click-point-to-correlate table.
 
 ## Phase 5 — Polish for Resume/Demo
 - Basic retention policy (drop/downsample data older than N hours).

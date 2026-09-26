@@ -15,14 +15,28 @@
       table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
       th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #30363d; }
       #meta { color: #8b949e; font-size: 13px; }
+      nav { display: flex; gap: 8px; margin-top: 16px; }
+      nav button { background: #161b22; color: #e6e6e6; border: 1px solid #30363d; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 14px; }
+      nav button.active { background: #1f6feb; border-color: #1f6feb; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+      .row input, .row button { background: #0e1116; color: #e6e6e6; border: 1px solid #30363d; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+      .row button { cursor: pointer; }
+      .row button:hover { border-color: #1f6feb; }
+      #hist-meta, #corr-meta { color: #8b949e; font-size: 13px; }
+      .hidden { display: none; }
     </style>
   </head>
   <body>
     <header>
       <span id="dot"></span>
-      <h1>sherlock live</h1>
+      <h1>sherlock</h1>
       <span id="meta">connecting…</span>
     </header>
+    <nav>
+      <button id="tab-live" class="active">Live</button>
+      <button id="tab-history">History</button>
+    </nav>
+    <section id="view-live">
     <div class="grid">
       <div class="card"><h3>CPU %</h3><canvas id="cpu"></canvas></div>
       <div class="card"><h3>Used mem (MB)</h3><canvas id="mem"></canvas></div>
@@ -34,6 +48,27 @@
         <tbody id="procs"><tr><td colspan="4">waiting for ticks…</td></tr></tbody>
       </table>
     </div>
+    </section>
+    <section id="view-history" class="hidden">
+    <div class="card" style="margin-top: 16px">
+      <h3>History — pick a range, click a spike to correlate</h3>
+      <div class="row">
+        <input type="datetime-local" id="hist-from" />
+        <input type="datetime-local" id="hist-to" />
+        <button id="hist-fetch">Fetch</button>
+        <span id="hist-meta">pick a range and fetch</span>
+      </div>
+      <canvas id="hist"></canvas>
+    </div>
+    <div class="card" style="margin-top: 16px">
+      <h3>Spike correlation</h3>
+      <div id="corr-meta">click a point on the history chart</div>
+      <table>
+        <thead><tr><th>PID</th><th>Name</th><th>CPU %</th><th>Mem KB</th></tr></thead>
+        <tbody id="corr-procs"><tr><td colspan="4">no spike selected</td></tr></tbody>
+      </table>
+    </div>
+    </section>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
