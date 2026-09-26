@@ -1,0 +1,372 @@
+:root {
+  --ground: #000;
+  --ink: #fff;
+  --faint: rgba(255, 255, 255, 0.16);
+  --hair: rgba(255, 255, 255, 0.34);
+  --mono: ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background: var(--ground);
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 0 0 64px;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+a { color: var(--ink); text-underline-offset: 3px; }
+
+/* ---- masthead ---- */
+.mast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 28px 28px 18px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.mast h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+.mast .sub {
+  margin: 8px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--ink);
+  padding: 8px 12px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  min-width: 240px;
+}
+
+.status .lamp {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border: 1px solid var(--ink);
+}
+
+.status.is-live {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.status.is-live .lamp {
+  background: var(--ground);
+  border-color: var(--ground);
+}
+
+.status.is-dead .lamp { background: transparent; }
+.status.is-stalled .lamp {
+  background: linear-gradient(to bottom, var(--ink) 50%, transparent 50%);
+}
+
+.status small {
+  display: block;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-size: 11px;
+  opacity: 1;
+}
+
+/* ---- cross-check stat strip ---- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--ink);
+}
+
+.stat {
+  padding: 14px 28px 16px;
+}
+
+.stat + .stat { border-left: 1px solid var(--hair); }
+
+.stat .k {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.stat .v {
+  font-size: clamp(2rem, 4.5vw, 3.2rem);
+  font-weight: 800;
+  line-height: 1;
+  margin-top: 4px;
+}
+
+.stat .v small {
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+/* ---- barcode field strip: data-driven, drawn from live ticks ---- */
+.fieldstrip {
+  display: block;
+  width: 100%;
+  height: 64px;
+  border-bottom: 1px solid var(--ink);
+}
+
+/* ---- tab menu rows ---- */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--ink);
+}
+
+.tabs button {
+  appearance: none;
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  border-right: 1px solid var(--hair);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 12px 28px;
+  cursor: pointer;
+}
+
+.tabs button:last-child { border-right: 0; }
+
+.tabs button:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+.tabs button.active {
+  background: var(--ink);
+  color: var(--ground);
+  font-weight: 700;
+}
+
+/* ---- fields ---- */
+.field { padding: 0 0 8px; }
+
+.fieldhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 28px 10px;
+}
+
+.fieldhead h2 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.fieldhead .addr {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.fieldhead .addr::before {
+  content: "ADDR ";
+}
+
+canvas.trace {
+  display: block;
+  width: calc(100% - 56px);
+  margin: 0 28px;
+  border: 1px solid var(--hair);
+}
+
+/* ---- ledger tables ---- */
+.ledger {
+  width: calc(100% - 56px);
+  margin: 12px 28px 0;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ledger caption {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0 0 8px;
+}
+
+.ledger th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 400;
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--ink);
+}
+
+.ledger td {
+  padding: 7px 10px 7px 0;
+  border-bottom: 1px solid var(--faint);
+}
+
+.ledger td.num, .ledger th.num { text-align: right; }
+
+.bar {
+  position: relative;
+  display: inline-block;
+  width: 120px;
+  height: 10px;
+  border: 1px solid var(--hair);
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+}
+
+.inverted .bar { border-color: #000; }
+.inverted .bar i { background: #000; }
+
+/* ---- inverted correlate panel: inversion is the emphasis device ---- */
+.inverted {
+  background: var(--ink);
+  color: var(--ground);
+  margin: 12px 28px 0;
+  padding: 14px 16px 16px;
+}
+
+.inverted h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.inverted .ledger {
+  width: 100%;
+  margin: 8px 0 0;
+}
+
+.inverted .ledger th { border-bottom-color: #000; }
+.inverted .ledger td { border-bottom-color: rgba(0, 0, 0, 0.25); }
+
+/* ---- history controls: bordered menu rows ---- */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0 28px;
+  border: 1px solid var(--ink);
+}
+
+.controls input {
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  border-right: 1px solid var(--hair);
+  font: inherit;
+  font-size: 13px;
+  padding: 10px 14px;
+  min-width: 0;
+}
+
+.controls button {
+  appearance: none;
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  border-left: 1px solid var(--hair);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.controls button:first-child { border-left: 0; }
+
+.controls button:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.note {
+  margin: 10px 28px 0;
+  font-size: 12px;
+}
+
+.note.steps {
+  white-space: pre-line;
+  border: 1px dashed var(--hair);
+  padding: 12px 16px;
+}
+
+.hidden { display: none !important; }
+
+footer {
+  margin: 32px 28px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--hair);
+  font-size: 11px;
+}
+
+/* thin instrument scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--ground); }
+::-webkit-scrollbar-thumb { background: var(--ink); border: 2px solid var(--ground); }
+
+@media (max-width: 720px) {
+  .mast, .stat, .fieldhead { padding-left: 16px; padding-right: 16px; }
+  .stats { grid-template-columns: 1fr; }
+  .stat + .stat { border-left: 0; border-top: 1px solid var(--hair); }
+  canvas.trace, .ledger, .inverted, .controls, .note { margin-left: 16px; margin-right: 16px; }
+  canvas.trace, .ledger { width: calc(100% - 32px); }
+  .inverted { width: calc(100% - 32px); }
+  .ledger-wrap { overflow-x: auto; }
+  .bar { width: 72px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none; transition: none; }
+}

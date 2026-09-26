@@ -3,72 +3,91 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sherlock</title>
-    <style>
-      body { font-family: system-ui, sans-serif; margin: 24px; background: #0e1116; color: #e6e6e6; }
-      header { display: flex; align-items: center; gap: 12px; }
-      #dot { width: 12px; height: 12px; border-radius: 50%; background: #666; }
-      #dot.ok { background: #3fb950; }
-      #dot.bad { background: #f85149; }
-      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
-      .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px; }
-      table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-      th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #30363d; }
-      #meta { color: #8b949e; font-size: 13px; }
-      nav { display: flex; gap: 8px; margin-top: 16px; }
-      nav button { background: #161b22; color: #e6e6e6; border: 1px solid #30363d; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 14px; }
-      nav button.active { background: #1f6feb; border-color: #1f6feb; }
-      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
-      .row input, .row button { background: #0e1116; color: #e6e6e6; border: 1px solid #30363d; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
-      .row button { cursor: pointer; }
-      .row button:hover { border-color: #1f6feb; }
-      #hist-meta, #corr-meta { color: #8b949e; font-size: 13px; }
-      .hidden { display: none; }
-    </style>
+    <title>sherlock · field instrument</title>
+    <meta name="description" content="Sherlock field instrument: live system trace, history scan, and spike-to-process correlation." />
+    <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <header>
-      <span id="dot"></span>
-      <h1>sherlock</h1>
-      <span id="meta">connecting…</span>
-    </header>
-    <nav>
-      <button id="tab-live" class="active">Live</button>
-      <button id="tab-history">History</button>
-    </nav>
-    <section id="view-live">
-    <div class="grid">
-      <div class="card"><h3>CPU %</h3><canvas id="cpu"></canvas></div>
-      <div class="card"><h3>Used mem (MB)</h3><canvas id="mem"></canvas></div>
-    </div>
-    <div class="card" style="margin-top: 16px">
-      <h3>Top processes (by CPU)</h3>
-      <table>
-        <thead><tr><th>PID</th><th>Name</th><th>CPU %</th><th>Mem KB</th></tr></thead>
-        <tbody id="procs"><tr><td colspan="4">waiting for ticks…</td></tr></tbody>
-      </table>
-    </div>
-    </section>
-    <section id="view-history" class="hidden">
-    <div class="card" style="margin-top: 16px">
-      <h3>History — pick a range, click a spike to correlate</h3>
-      <div class="row">
-        <input type="datetime-local" id="hist-from" />
-        <input type="datetime-local" id="hist-to" />
-        <button id="hist-fetch">Fetch</button>
-        <span id="hist-meta">pick a range and fetch</span>
+    <header class="mast">
+      <div>
+        <h1>SHERLOCK</h1>
+        <p class="sub">why-is-this-slow // field instrument</p>
       </div>
-      <canvas id="hist"></canvas>
-    </div>
-    <div class="card" style="margin-top: 16px">
-      <h3>Spike correlation</h3>
-      <div id="corr-meta">click a point on the history chart</div>
-      <table>
-        <thead><tr><th>PID</th><th>Name</th><th>CPU %</th><th>Mem KB</th></tr></thead>
-        <tbody id="corr-procs"><tr><td colspan="4">no spike selected</td></tr></tbody>
-      </table>
-    </div>
+      <div class="status" id="status" role="status" aria-live="polite">
+        <span class="lamp" aria-hidden="true"></span>
+        <span><span id="meta">CONNECTING</span><small id="meta-sub">field starting…</small></span>
+      </div>
+    </header>
+
+    <section class="stats" aria-label="cross-check readings">
+      <div class="stat"><div class="k">CH1 · CPU</div><div class="v"><span id="stat-cpu">—</span> <small>%</small></div></div>
+      <div class="stat"><div class="k">CH2 · MEM USED</div><div class="v"><span id="stat-mem">—</span> <small>MB</small></div></div>
+      <div class="stat"><div class="k">FRAME · LAST TICK</div><div class="v" style="font-size: clamp(1.2rem, 2.6vw, 1.8rem)"><span id="stat-tick">—</span></div></div>
     </section>
+
+    <canvas class="fieldstrip hidden" id="strip" height="64" aria-hidden="true"></canvas>
+
+    <nav class="tabs" aria-label="instrument mode">
+      <button id="tab-live" class="active" aria-pressed="true">Live trace</button>
+      <button id="tab-history" aria-pressed="false">History scan</button>
+    </nav>
+
+    <main>
+      <section id="view-live" aria-label="live trace">
+        <div class="field">
+          <div class="fieldhead"><h2>CH1 · CPU %</h2><span class="addr">60 frames · 3s sweep</span></div>
+          <canvas class="trace" id="cpu" height="120"></canvas>
+        </div>
+        <div class="field">
+          <div class="fieldhead"><h2>CH2 · Used mem MB</h2><span class="addr">60 frames · 3s sweep</span></div>
+          <canvas class="trace" id="mem" height="120"></canvas>
+        </div>
+        <div class="field">
+          <div class="fieldhead"><h2>Ledger · top processes by CPU</h2><span class="addr" id="ledger-addr">awaiting frames</span></div>
+          <div class="ledger-wrap">
+          <table class="ledger">
+            <caption>Live process ledger</caption>
+            <thead><tr><th>PID</th><th>Name</th><th class="num">CPU %</th><th class="num">Mem KB</th></tr></thead>
+            <tbody id="procs"><tr><td colspan="4">awaiting frames · start the agent to light the field.</td></tr></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-history" class="hidden" aria-label="history scan">
+        <div class="field">
+          <div class="fieldhead"><h2>Scan · pick a range</h2><span class="addr">limit 500</span></div>
+          <div class="controls" role="group" aria-label="history range">
+            <input type="datetime-local" id="hist-from" aria-label="range start" />
+            <input type="datetime-local" id="hist-to" aria-label="range end" />
+            <button id="hist-fetch">Scan</button>
+            <button id="hist-peak">Correlate peak</button>
+          </div>
+          <p class="note" id="hist-meta">Pick a range and scan.</p>
+          <canvas class="trace hidden" id="hist" height="140"></canvas>
+        </div>
+        <div class="field">
+          <div class="fieldhead"><h2>Correlation · inverted spike</h2><span class="addr">±5s tolerance</span></div>
+          <div class="inverted" id="corr-panel">
+            <h3 id="corr-title">No spike selected</h3>
+            <p class="note" id="corr-meta" style="margin: 4px 0 0">Click a column on the scan trace, or correlate the peak.</p>
+            <div class="ledger-wrap">
+            <table class="ledger">
+              <caption>Inverted spike ledger</caption>
+              <thead><tr><th>PID</th><th>Name</th><th class="num">CPU %</th><th class="num">Mem KB</th></tr></thead>
+              <tbody id="corr-procs"><tr><td colspan="4">no inversion yet</td></tr></tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>local-only instrument · agent :3s sweep · batch :60s store · retention 48h · axum :8080 → vite :5173</footer>
+
     <script type="module" src="/src/main.js"></script>
-  </body>
+  <!-- impeccable-live-start -->
+<script src="http://localhost:8400/live.js?token=5e4dc533-146c-4768-9fa3-041c1b6a7693"></script>
+<!-- impeccable-live-end -->
+</body>
 </html>
