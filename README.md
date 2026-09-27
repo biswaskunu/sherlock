@@ -69,17 +69,12 @@ in-memory only and never persisted. At 3s sampling + top-10 processes/tick,
 
 ![sherlock demo: live view → spike → history → correlate](docs/demo.gif)
 
-<video src="https://raw.githubusercontent.com/biswaskunu/sherlock/main/docs/demo.mp4" poster="https://raw.githubusercontent.com/biswaskunu/sherlock/main/docs/demo.gif" controls muted playsinline preload="metadata" width="100%"></video>
-
-https://github.com/biswaskunu/sherlock/blob/main/docs/demo.mp4
-
 Walkthrough rendered from a real spike run (4× `yes` + `sha256sum`,
 peak 41.7%): live SSE view → deliberate spike → History tab (80 samples,
 peak marked) → click spike → `GET /api/correlate` names the culprits
-(`yes` ×4 + `sha256sum`, ~98% CPU each). The GIF above is a silent
-preview; `docs/demo.mp4` (~26s) is the full walkthrough. To reproduce
-live: run the full stack below, spike the CPU, then open History and
-click the peak.
+(`yes` ×4 + `sha256sum`, ~98% CPU each). The GIF above is the full
+~26s walkthrough. To reproduce live: run the full stack below, spike
+the CPU, then open History and click the peak.
 
 ## Live Dashboard (Phase 3)
 
@@ -107,7 +102,7 @@ sherlock/
 │       └── db/         # PgPool setup
 │   └── migrations/     # sqlx migrations (0001 samples + process_samples)
 ├── dashboard/          # Vite + Chart.js live + history views (SSE live, REST history/correlate)
-├── docs/               # demo.gif (silent preview) + demo.mp4 (full ~26s walkthrough)
+├── docs/               # demo.gif (full ~26s walkthrough)
 ├── schema.sql          # Postgres migrations
 ├── docker-compose.yml  # local Postgres
 ├── .env.example        # env template
