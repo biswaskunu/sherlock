@@ -69,7 +69,7 @@ in-memory only and never persisted. At 3s sampling + top-10 processes/tick,
 
 ![sherlock demo: live view → spike → history → correlate](docs/demo.gif)
 
-<video src="https://github.com/biswaskunu/sherlock/raw/main/docs/demo.mp4" controls muted playsinline preload="metadata" width="100%"></video>
+<video src="https://raw.githubusercontent.com/biswaskunu/sherlock/main/docs/demo.mp4" poster="https://raw.githubusercontent.com/biswaskunu/sherlock/main/docs/demo.gif" controls muted playsinline preload="metadata" width="100%"></video>
 
 https://github.com/biswaskunu/sherlock/blob/main/docs/demo.mp4
 
