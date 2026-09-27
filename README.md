@@ -69,7 +69,9 @@ in-memory only and never persisted. At 3s sampling + top-10 processes/tick,
 
 ![sherlock demo: live view → spike → history → correlate](docs/demo.gif)
 
-<video src="docs/demo.mp4" controls preload="metadata" width="100%"></video>
+<video src="https://github.com/biswaskunu/sherlock/raw/main/docs/demo.mp4" controls muted playsinline preload="metadata" width="100%"></video>
+
+https://github.com/biswaskunu/sherlock/blob/main/docs/demo.mp4
 
 Walkthrough rendered from a real spike run (4× `yes` + `sha256sum`,
 peak 41.7%): live SSE view → deliberate spike → History tab (80 samples,
