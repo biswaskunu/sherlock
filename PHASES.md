@@ -38,7 +38,7 @@
 - README with architecture diagram + setup instructions.
 - Record a short demo GIF/video showing: live view → deliberate spike → history view → correlation.
 - Deploy backend (Railway) if you want a live demo link; agent stays local (it's inherently a local tool) — document that clearly in the README so it's not read as a missing deployment.
-- **Status:** complete — hourly `DELETE FROM samples` purge (`RETENTION_HOURS=48` default, `process_samples` via cascade, verified: backdated rows deleted, fresh kept); README has prerequisites/setup/retention/local-only note; `docs/demo.gif` walkthrough rendered from a real spike run (41.7% peak → `yes` ×4 + `sha256sum` via correlate). Deploy deliberately skipped: local-only v1, documented in README.
+- **Status:** complete — hourly `DELETE FROM samples` purge (`RETENTION_HOURS=48` default, `process_samples` via cascade, verified: backdated rows deleted, fresh kept); README has prerequisites/setup/retention/local-only note; `docs/demo.gif` walkthrough rendered from a real spike run (41.7% peak → `yes` ×4 + `sha256sum` via correlate) + `docs/demo.mp4` full video (~26s, compressed 1080p60 → 1280p30). Deploy deliberately skipped: local-only v1, documented in README.
 
 ## Scope Discipline Notes
 - Don't add Windows/Mac support until Linux v1 is fully working end-to-end.
