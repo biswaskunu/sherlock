@@ -120,6 +120,23 @@ sherlock/
 - No network stats collected yet (net_rx/net_tx reserved in schema)
 - No alerting, no multi-user, no fleet monitoring
 
+## Future Scope
+
+v1 is feature-complete. The following are deliberately out of scope for v1
+and are candidates for follow-up work:
+
+- **Network + disk stats** — populate reserved `net_rx/net_tx` columns
+  (interface-level stats only, no packet inspection) and surface disk
+  I/O charts in the dashboard (collected but not charted in v1).
+- **Alerting + config** — threshold-based alerts/notifications, configurable
+  sampling interval (v1 is fixed at 3s).
+- **Platform + scale** — Windows/Mac support (v1 is Linux-first), auth/multi-user,
+  cross-machine/fleet monitoring, mobile/cloud agent variants.
+
+> Contributions welcome: any Future Scope item can be added through a
+> contribution — open an issue to propose/claim an item, then submit a PR
+> against `main`. Keep `README`, `PRD`, and `api-spec.md` in sync when behavior changes.
+
 ## Notes for AI Handoff
 
 - Agent flush POSTs 20-sample batches to `POST /api/metrics/batch` (keeps buffer + retries on failure)

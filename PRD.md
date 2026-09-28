@@ -49,3 +49,16 @@ Primarily a personal tool / portfolio piece. Secondary audience: anyone debuggin
 - Cross-platform support (Linux `/proc` vs Windows/Mac APIs) — may scope to Linux-only for v1 via `sysinfo` abstraction.
 - Agent crash mid-buffer loses up to 60s of unsent samples — acceptable for v1, noted as a known limitation.
 - Correlation accuracy depends on sampling granularity (3s may miss very short spikes) — acceptable trade-off, documented.
+
+## 8. Future Scope (beyond v1)
+
+Carried over from §3 Non-Goals + v1 limitations. Not committed, ordered roughly
+by effort:
+
+- Network + disk stats (interface-level `net_rx/net_tx`, disk I/O charts).
+- Alerting/notifications + configurable sampling interval.
+- Platform + scale: Windows/Mac, auth/multi-user, fleet, mobile/cloud agents.
+
+> Contributions welcome: future scope can be added through contribution —
+> file an issue for the item you want, then open a PR. Update PRD + README
+> if the change alters product scope or API behavior.
